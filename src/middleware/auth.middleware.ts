@@ -1,0 +1,63 @@
+import { Request, Response, NextFunction } from "express";
+import { createSessionClient, createAdminClient, createJwtClient, APPWRITE_CONFIG } from "../services/appwrite.service.js";
+import { Query } from "node-appwrite";
+
+export interface AuthRequest extends Request {
+  user?: any;
+}
+
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    // 1. Get session or JWT from various sources
+    const session = req.cookies[`a_session_${APPWRITE_CONFIG.projectId}`] || req.headers["x-appwrite-session"];
+    const jwt = req.headers["x-appwrite-jwt"];
+
+    console.log({
+      session: session ? "present" : "missing",
+      jwt: jwt ? "present" : "missing"
+    });
+
+    if (!session && !jwt) {
+      return res.status(401).json({ error: "Unauthorized: No authentication found" });
+    }
+
+    let appwriteUser;
+
+    if (jwt) {
+      // Use JWT to validate (Recommended for Mobile)
+      const { account } = createJwtClient(jwt as string);
+      appwriteUser = await account.get();
+    } else {
+      // Use Session to validate (Standard for Web)
+      const { account } = createSessionClient(session as string);
+      appwriteUser = await account.get();
+    }
+
+    if (!appwriteUser) {
+      return res.status(401).json({ error: "Unauthorized: Invalid auth credentials" });
+    }
+
+    // 2. Fetch full user profile from database using Admin Client
+    const { databases } = createAdminClient();
+    const profile = await databases.getDocument(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.userCollectionId,
+      appwriteUser.$id
+    );
+
+    if (!profile) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    console.log({ profile });
+
+
+    // 3. Attach user data to request object
+    req.user = profile;
+
+    next();
+  } catch (error: any) {
+    console.error("Auth Middleware Error:", error.message);
+    res.status(401).json({ error: "Unauthorized: Session validation failed" });
+  }
+};
