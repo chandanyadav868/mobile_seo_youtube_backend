@@ -89,6 +89,50 @@ export class OpenRouterService {
   }
 
   /**
+   * Generates a side-by-side video comparison analysis using OpenRouter.
+   */
+  static async generateVideoComparison(promptPayload: any, user: any) {
+    try {
+      const prompt = `
+        You are a YouTube SEO and Growth Expert.
+        Goal: Compare 2 or more videos to identify why one is outperforming the others.
+        Constraint: Return JSON only with these keys: 
+        - comparisonSummary (string: high-level overview of the performance gap)
+        - metadataAnalysis (array of objects: breakdown of titles, tags, and description effectiveness for each video)
+        - viewVelocityDrivers (array of strings: bullet points why the top video is winning)
+        - improvementRoadmap (array of strings: step-by-step SEO and content changes for the underperforming videos)
+        - winningFormula (string: what to replicate from the top video)
+
+        Keep the analysis deep, technical (SEO-wise), and creator-centric. 
+        IMPORTANT: Always ensure viewVelocityDrivers and improvementRoadmap are returned as arrays, even if they only contain one item.
+
+        Videos Data:
+        ${JSON.stringify(promptPayload, null, 2)}
+      `;
+
+      const response = await this.client.chat.send({
+        chatRequest: {
+          model: DEFAULT_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.3,
+        },
+      });
+
+      console.log("Raw Video Comparison Response:", JSON.stringify(response, null, 2));
+
+      const text = this.extractText(response);
+      if (!text) {
+        throw new Error("Empty response from OpenRouter");
+      }
+
+      return this.extractJson(text);
+    } catch (error) {
+      console.error("OpenRouter Video Comparison Error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper to extract text content from OpenRouter response.
    */
   private static extractText(response: any): string | null {

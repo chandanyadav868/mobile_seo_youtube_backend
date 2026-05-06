@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { config } from './config/index.js';
 import videoRoutes from './routes/video.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app: Application = express();
 
@@ -23,6 +24,7 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/videos', videoRoutes);
+app.use('/api/users', userRoutes);
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {

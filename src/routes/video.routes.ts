@@ -16,6 +16,10 @@ router.post('/generate-report', authMiddleware, VideoController.generateTrending
 // Protected by authMiddleware
 router.post('/generate-competitor', authMiddleware, VideoController.generateCompetitorAnalysis);
 
+// POST /api/videos/generate-comparison
+// Protected by authMiddleware
+router.post('/generate-comparison', authMiddleware, VideoController.generateVideoComparison);
+
 // GET /api/videos/:videoId
 router.get('/:videoId', VideoController.getVideoDetails);
 
