@@ -20,6 +20,19 @@ router.post('/generate-competitor', authMiddleware, VideoController.generateComp
 // Protected by authMiddleware
 router.post('/generate-comparison', authMiddleware, VideoController.generateVideoComparison);
 
+// POST /api/videos/enhance-seo
+// Protected by authMiddleware
+router.post('/enhance-seo', authMiddleware, VideoController.enhanceSeo);
+
+// POST /api/videos/log-fetch-cost — deducts 3 coins for YouTube fetch actions
+router.post('/log-fetch-cost', authMiddleware, VideoController.logFetchCost);
+
+// POST /api/videos/log-search-cost — deducts 2 coins for YouTube search actions
+router.post('/log-search-cost', authMiddleware, VideoController.logSearchCost);
+
+// POST /api/videos/log-heavy-cost — deducts 10 coins for intensive analysis
+router.post('/log-heavy-cost', authMiddleware, VideoController.logHeavyActionCost);
+
 // GET /api/videos/:videoId
 router.get('/:videoId', VideoController.getVideoDetails);
 

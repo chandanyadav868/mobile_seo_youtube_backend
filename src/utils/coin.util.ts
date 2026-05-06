@@ -18,12 +18,16 @@ export const deductCoins = async (user: any, amount: number): Promise<boolean> =
   // 4. Deduct coins and update database
   try {
     const { databases } = createAdminClient();
+    const finalCoins = currentCoins - amount;
+    
+    console.log(`[Deduction] User: ${user.$id} | From: ${currentCoins} | Deduct: ${amount} | Final: ${finalCoins}`);
+    
     await databases.updateDocument(
       APPWRITE_CONFIG.databaseId,
       APPWRITE_CONFIG.userCollectionId,
       user.$id,
       {
-        coins: (currentCoins - amount).toString()
+        coins: finalCoins.toString()
       }
     );
     return true;

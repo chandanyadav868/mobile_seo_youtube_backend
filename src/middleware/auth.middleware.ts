@@ -24,21 +24,25 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     let appwriteUser;
 
     if (jwt) {
-      // Use JWT to validate (Recommended for Mobile)
+      console.log("Auth Middleware: Validating with JWT");
       const { account } = createJwtClient(jwt as string);
       appwriteUser = await account.get();
     } else {
-      // Use Session to validate (Standard for Web)
+      console.log("Auth Middleware: Validating with Session");
       const { account } = createSessionClient(session as string);
       appwriteUser = await account.get();
     }
 
     if (!appwriteUser) {
-      return res.status(401).json({ error: "Unauthorized: Invalid auth credentials" });
+      console.error("Auth Middleware: No Appwrite user found");
+      return res.status(401).json({ 
+        error: { code: 'UNAUTHORIZED', message: "Invalid auth credentials" } 
+      });
     }
 
     // 2. Fetch full user profile from database using Admin Client
     const { databases } = createAdminClient();
+    console.log("Auth Middleware: Fetching profile for", appwriteUser.$id);
     const profile = await databases.getDocument(
       APPWRITE_CONFIG.databaseId,
       APPWRITE_CONFIG.userCollectionId,
@@ -46,18 +50,21 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     );
 
     if (!profile) {
-      return res.status(404).json({ error: "User profile not found" });
+      console.error("Auth Middleware: User profile document not found in DB");
+      return res.status(404).json({ 
+        error: { code: 'PROFILE_NOT_FOUND', message: "User profile not found" } 
+      });
     }
 
-    console.log({ profile });
-
-
+    console.log("Auth Middleware: Success, profile attached");
     // 3. Attach user data to request object
     req.user = profile;
 
     next();
   } catch (error: any) {
     console.error("Auth Middleware Error:", error.message);
-    res.status(401).json({ error: "Unauthorized: Session validation failed" });
+    res.status(401).json({ 
+      error: { code: 'AUTH_FAILED', message: "Session validation failed: " + error.message } 
+    });
   }
 };

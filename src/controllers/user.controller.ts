@@ -39,3 +39,62 @@ export const addCoins = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Failed to add coins" });
   }
 };
+
+export const dailyLogin = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { databases } = createAdminClient();
+    
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+    
+    // Check if lastLoginDate exists and matches today
+    if (user.lastLoginDate === today) {
+      return res.status(200).json({ 
+        success: false, 
+        message: "Daily login bonus already claimed today",
+        coins: user.coins
+      });
+    }
+
+    // Grant 20 coins
+    let currentCoins = typeof user.coins === "string" ? parseInt(user.coins) : user.coins;
+    if (isNaN(currentCoins)) currentCoins = 0;
+    const newCoins = currentCoins + 20;
+
+    try {
+      // Attempt to update coins + lastLoginDate (requires the attribute to exist in collection)
+      await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.userCollectionId,
+        user.$id,
+        {
+          coins: newCoins.toString(),
+          lastLoginDate: today
+        }
+      );
+    } catch (updateError: any) {
+      // Fallback: update only coins if lastLoginDate attribute doesn't exist yet
+      console.warn("Daily Login: lastLoginDate field may not exist in schema. Updating coins only.", updateError.message);
+      await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.userCollectionId,
+        user.$id,
+        { coins: newCoins.toString() }
+      );
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      coins: newCoins,
+      message: "Claimed 20 daily login coins!" 
+    });
+  } catch (error: any) {
+    console.error("Daily Login Error:", error.message);
+    res.status(500).json({ error: "Failed to process daily login" });
+  }
+};
