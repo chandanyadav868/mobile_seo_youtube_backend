@@ -98,3 +98,51 @@ export const dailyLogin = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Failed to process daily login" });
   }
 };
+
+export const resetLlmLimits = async (req: any, res: Response) => {
+  try {
+    // This route is intended for a daily cron job
+    // It resets remoteLlmCount for all users who have used it
+    const { databases } = createAdminClient();
+    const today = new Date().toISOString().split("T")[0];
+
+    // 1. Fetch users who have a count > 0 (optimizing by only fetching those who need reset)
+    // Note: Appwrite queries require the attribute to be indexed
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.userCollectionId,
+      [] // Add queries if needed, e.g., Query.greaterThan("remoteLlmCount", 0)
+    );
+
+    console.log(`[Reset] Found ${response.documents.length} users to check for LLM reset.`);
+
+    // 2. Update each user
+    const updatePromises = response.documents.map(user => {
+      const currentCount = typeof user.remoteLlmCount === "string" ? parseInt(user.remoteLlmCount) : (user.remoteLlmCount || 0);
+
+      // Even with lazy reset, a proactive reset ensures DB consistency
+      if (currentCount > 0 || user.lastRemoteLlmDate !== today) {
+        return databases.updateDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.userCollectionId,
+          user.$id,
+          {
+            remoteLlmCount: "0",
+            lastRemoteLlmDate: today
+          }
+        ).catch(err => console.error(`Failed to reset user ${user.$id}:`, err.message));
+      }
+      return Promise.resolve();
+    });
+
+    await Promise.all(updatePromises);
+
+    res.status(200).json({ 
+      success: true, 
+      message: `Successfully refreshed LLM limits for ${response.documents.length} users.` 
+    });
+  } catch (error: any) {
+    console.error("Reset LLM Limits Error:", error.message);
+    res.status(500).json({ error: "Failed to reset LLM limits" });
+  }
+};

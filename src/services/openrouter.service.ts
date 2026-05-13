@@ -74,7 +74,7 @@ export class OpenRouterService {
         },
       });
 
-      console.log("Raw Competitor Analysis Response:", JSON.stringify(response, null, 2));
+      // console.log("Raw Competitor Analysis Response:", JSON.stringify(response, null, 2));
 
       const text = this.extractText(response);
       if (!text) {
@@ -223,22 +223,22 @@ Output ONLY valid JSON matching this schema. Ensure all special characters are p
       // Find the first '{' and last '}'
       const firstBrace = text.indexOf('{');
       const lastBrace = text.lastIndexOf('}');
-      
+
       if (firstBrace === -1 || lastBrace === -1) {
         throw new Error("No JSON object found in response");
       }
 
       const cleanedText = text.substring(firstBrace, lastBrace + 1);
-      
+
       // Attempt to fix common AI formatting errors like unescaped newlines in strings
       const sanitizedText = cleanedText.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
       // Wait! If I replace all \n with \\n, it might break existing JSON structure.
       // Better to use a more surgical approach or just rely on the AI being better with lower temperature.
-      
+
       return JSON.parse(cleanedText);
     } catch (parseError) {
       console.error("JSON Parse Error. Raw text:", text);
-      
+
       // One last try: strip control characters
       try {
         const firstBrace = text.indexOf('{');

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { LangChainService } from '../services/langchain.service.js';
 import { OpenRouterService } from '../services/openrouter.service.js';
 import { deductCoins } from '../utils/coin.util.js';
+import { checkLlmUsage, checkYoutubeUsage } from '../utils/usage.util.js';
 
 export class VideoController {
   static async generateMetadata(req: any, res: Response) {
@@ -33,6 +34,28 @@ export class VideoController {
           error: {
             code: 'INSUFFICIENT_COINS',
             message: 'You need 10 coins for AI generation. Watch a short ad to earn more!'
+          }
+        });
+      }
+
+      // Enforce Daily Remote LLM Limit (3 per day for free users)
+      const usageCheck = await checkLlmUsage(user);
+      if (!usageCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: usageCheck.message
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
           }
         });
       }
@@ -72,6 +95,28 @@ export class VideoController {
         });
       }
 
+      // Enforce Daily Remote LLM Limit
+      const usageCheck = await checkLlmUsage(user);
+      if (!usageCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: usageCheck.message
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
+          }
+        });
+      }
+
       const result = await OpenRouterService.generateTrendingReport(payload, user);
       res.status(200).json(result);
     } catch (error) {
@@ -107,6 +152,28 @@ export class VideoController {
         });
       }
 
+      // Enforce Daily Remote LLM Limit
+      const usageCheck = await checkLlmUsage(user);
+      if (!usageCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: usageCheck.message
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
+          }
+        });
+      }
+
       const result = await OpenRouterService.generateCompetitorAnalysis(payload, user);
       res.status(200).json(result);
     } catch (error) {
@@ -119,6 +186,9 @@ export class VideoController {
     try {
       const { payload } = req.body;
       const user = (req as any).user || req.body.user;
+
+      console.log({ user });
+
 
       const isPremium = user?.plan === 'PREMIUM';
       const maxLimit = isPremium ? 5 : 2;
@@ -151,6 +221,28 @@ export class VideoController {
         });
       }
 
+      // Enforce Daily Remote LLM Limit
+      const usageCheck = await checkLlmUsage(user);
+      if (!usageCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: usageCheck.message
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
+          }
+        });
+      }
+
       const result = await OpenRouterService.generateVideoComparison(payload, user);
       res.status(200).json(result);
     } catch (error) {
@@ -179,6 +271,28 @@ export class VideoController {
         });
       }
 
+      // Track YouTube API Usage
+      const usage = await checkYoutubeUsage(user);
+      if (!usage.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: usage.message
+          }
+        });
+      }
+
+      // Enforce Daily Remote LLM Limit
+      const usageCheck = await checkLlmUsage(user);
+      if (!usageCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'DAILY_LIMIT_REACHED',
+            message: usageCheck.message
+          }
+        });
+      }
+
       const result = await OpenRouterService.enhanceSeo(payload, user);
       res.status(200).json(result);
     } catch (error) {
@@ -198,8 +312,8 @@ export class VideoController {
 
       if (!user) {
         console.error('Log Fetch Cost - No User in Request');
-        return res.status(401).json({ 
-          error: { code: 'UNAUTHORIZED', message: 'Authentication required' } 
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
         });
       }
 
@@ -212,11 +326,23 @@ export class VideoController {
           }
         });
       }
+
+      // Track YouTube API Usage
+      const usage = await checkYoutubeUsage(user);
+      if (!usage.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: usage.message
+          }
+        });
+      }
+
       res.status(200).json({ success: true, cost: 3 });
     } catch (error) {
       console.error('Log Fetch Cost Error:', error);
-      res.status(500).json({ 
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to log fetch cost' } 
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to log fetch cost' }
       });
     }
   }
@@ -231,8 +357,8 @@ export class VideoController {
 
       if (!user) {
         console.error('Log Search Cost - No User in Request');
-        return res.status(401).json({ 
-          error: { code: 'UNAUTHORIZED', message: 'Authentication required' } 
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
         });
       }
 
@@ -245,11 +371,23 @@ export class VideoController {
           }
         });
       }
+
+      // Track YouTube API Usage
+      const usage = await checkYoutubeUsage(user);
+      if (!usage.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: usage.message
+          }
+        });
+      }
+
       res.status(200).json({ success: true, cost: 2 });
     } catch (error) {
       console.error('Log Search Cost Error:', error);
-      res.status(500).json({ 
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to log search cost' } 
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to log search cost' }
       });
     }
   }
@@ -263,8 +401,8 @@ export class VideoController {
       console.log('Log Heavy Action Cost - User ID:', user?.$id);
 
       if (!user) {
-        return res.status(401).json({ 
-          error: { code: 'UNAUTHORIZED', message: 'Authentication required' } 
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
         });
       }
 
@@ -277,11 +415,23 @@ export class VideoController {
           }
         });
       }
+
+      // Track YouTube API Usage
+      const usage = await checkYoutubeUsage(user);
+      if (!usage.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: usage.message
+          }
+        });
+      }
+
       res.status(200).json({ success: true, cost: 10 });
     } catch (error) {
       console.error('Log Heavy Action Cost Error:', error);
-      res.status(500).json({ 
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to log action cost' } 
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to log action cost' }
       });
     }
   }
