@@ -348,6 +348,41 @@ export class VideoController {
   }
 
   /**
+   * Deducts 3 coins for local LLM completions.
+   * Private and local — does not check or utilize YouTube Data API quotas.
+   */
+  static async logLlmCost(req: any, res: Response) {
+    try {
+      const user = req.user;
+      console.log('Log LLM Cost - User ID:', user?.$id);
+
+      if (!user) {
+        console.error('Log LLM Cost - No User in Request');
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        });
+      }
+
+      const hasCoins = await deductCoins(user, 3);
+      if (!hasCoins) {
+        return res.status(402).json({
+          error: {
+            code: 'INSUFFICIENT_COINS',
+            message: 'You need 3 coins for local LLM chats. Earn more by watching a short ad!'
+          }
+        });
+      }
+
+      res.status(200).json({ success: true, cost: 3 });
+    } catch (error) {
+      console.error('Log LLM Cost Error:', error);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to log LLM cost' }
+      });
+    }
+  }
+
+  /**
    * Deducts 2 coins for lightweight YouTube search actions (Trend Explorer search).
    */
   static async logSearchCost(req: any, res: Response) {

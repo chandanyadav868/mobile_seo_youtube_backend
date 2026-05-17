@@ -27,6 +27,9 @@ router.post('/enhance-seo', authMiddleware, VideoController.enhanceSeo);
 // POST /api/videos/log-fetch-cost — deducts 3 coins for YouTube fetch actions
 router.post('/log-fetch-cost', authMiddleware, VideoController.logFetchCost);
 
+// POST /api/videos/log-llm-cost — deducts 3 coins for local LLM completions without checking YouTube daily limits
+router.post('/log-llm-cost', authMiddleware, VideoController.logLlmCost);
+
 // POST /api/videos/log-search-cost — deducts 2 coins for YouTube search actions
 router.post('/log-search-cost', authMiddleware, VideoController.logSearchCost);
 
