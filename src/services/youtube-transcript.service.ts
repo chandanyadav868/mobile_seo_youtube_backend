@@ -77,6 +77,8 @@ export class YoutubeTranscriptService {
 
       if (segments && segments.length > 0) {
         const fullText = segments.map((seg: any) => seg.text).join(' ');
+        console.log(`[YoutubeTranscriptService] [Layer 1] SUCCESS! Fetched ${segments.length} segments for videoId: ${videoId}`);
+        console.log(`[YoutubeTranscriptService] Transcript preview: "${fullText.substring(0, 300)}..."`);
         return {
           videoId,
           segments: segments.map((seg: any) => ({
@@ -95,6 +97,8 @@ export class YoutubeTranscriptService {
     try {
       console.log(`[YoutubeTranscriptService] [Layer 2] Fetching transcript via Web client fallback for videoId: ${videoId}`);
       const result = await this.fetchFallbackWeb(videoId);
+      console.log(`[YoutubeTranscriptService] [Layer 2] SUCCESS! Fetched ${result.segments.length} segments for videoId: ${videoId}`);
+      console.log(`[YoutubeTranscriptService] Transcript preview: "${result.fullText.substring(0, 300)}..."`);
       return result;
     } catch (fallbackError: any) {
       console.error(`[YoutubeTranscriptService] All layers failed for ${videoId}:`, fallbackError);
