@@ -216,6 +216,45 @@ Output ONLY valid JSON matching this schema. Ensure all special characters are p
   }
 
   /**
+   * Generates highly clickable suggested titles based on YouTube autocomplete query keywords.
+   */
+  static async generateSuggestedTitles(keywords: string[], baseKeyword: string) {
+    try {
+      const prompt = `
+        You are a World-Class YouTube Growth Expert and Copywriter.
+        Goal: Generate 5 highly clickable, high-CTR (Click-Through-Rate) YouTube video titles designed to rank highly.
+        Constraint: Return JSON only with these keys: 
+        - suggestedTitles (array of strings: the 5 optimized video titles)
+        - strategyReasoning (string: short 2-3 sentence explanation of the psychology behind these titles)
+
+        Use these real search suggestions that users are actively typing into YouTube to guide your naming:
+        - Core Topic: ${baseKeyword}
+        - Real YouTube Searches: ${keywords.join(', ')}
+
+        Make the titles engaging but natural, avoiding pure clickbait. Focus on curiosity, benefits, or direct search intent.
+      `;
+
+      const response = await this.client.chat.send({
+        chatRequest: {
+          model: DEFAULT_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+        },
+      });
+
+      const text = this.extractText(response);
+      if (!text) {
+        throw new Error("Empty response from OpenRouter");
+      }
+
+      return this.extractJson(text);
+    } catch (error) {
+      console.error("OpenRouter Suggested Titles Error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Robustly extracts and parses JSON from text.
    */
   private static extractJson(text: string) {

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { LangChainService } from '../services/langchain.service.js';
 import { OpenRouterService } from '../services/openrouter.service.js';
+import { YoutubeTranscriptService } from '../services/youtube-transcript.service.js';
+import { YoutubeMetadataService } from '../services/youtube-metadata.service.js';
 import { deductCoins } from '../utils/coin.util.js';
 import { checkLlmUsage, checkYoutubeUsage } from '../utils/usage.util.js';
 
@@ -480,5 +482,113 @@ export class VideoController {
       description: 'Fetched from backend',
       mocked: true
     });
+  }
+
+  static async getVideoTranscript(req: Request, res: Response) {
+    try {
+      const videoId = req.params.videoId as string;
+      const user = (req as any).user || req.body.user;
+
+      if (!videoId) {
+        return res.status(400).json({
+          error: { code: 'INVALID_REQUEST', message: 'Video ID or URL is required' }
+        });
+      }
+
+      if (!user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        });
+      }
+
+      // Deduct 3 coins for caption extraction
+      const hasCoins = await deductCoins(user, 3);
+      if (!hasCoins) {
+        return res.status(402).json({
+          error: {
+            code: 'INSUFFICIENT_COINS',
+            message: 'You need 3 coins to fetch the video transcript. Watch a short ad to earn more!'
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
+          }
+        });
+      }
+
+      // Fetch the transcript via our service
+      const result = await YoutubeTranscriptService.fetchTranscript(videoId);
+      
+      res.status(200).json(result);
+    } catch (error: any) {
+      console.error('[VideoController] Transcript Error:', error);
+      res.status(400).json({
+        error: {
+          code: 'TRANSCRIPT_ERROR',
+          message: error.message || 'Failed to fetch video transcript'
+        }
+      });
+    }
+  }
+
+  static async getVideoScrapedMetadata(req: Request, res: Response) {
+    try {
+      const videoId = req.params.videoId as string;
+      const user = (req as any).user || req.body.user;
+
+      if (!videoId) {
+        return res.status(400).json({
+          error: { code: 'INVALID_REQUEST', message: 'Video ID or URL is required' }
+        });
+      }
+
+      if (!user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        });
+      }
+
+      // Deduct 3 coins for zero-quota metadata extraction
+      const hasCoins = await deductCoins(user, 3);
+      if (!hasCoins) {
+        return res.status(402).json({
+          error: {
+            code: 'INSUFFICIENT_COINS',
+            message: 'You need 3 coins to retrieve video details. Watch a short ad to earn more!'
+          }
+        });
+      }
+
+      // Track YouTube API Usage
+      const youtubeCheck = await checkYoutubeUsage(user);
+      if (!youtubeCheck.allowed) {
+        return res.status(403).json({
+          error: {
+            code: 'YOUTUBE_DAILY_LIMIT_REACHED',
+            message: youtubeCheck.message
+          }
+        });
+      }
+
+      // Fetch metadata via our scraped service
+      const result = await YoutubeMetadataService.fetchMetadata(videoId);
+      
+      res.status(200).json(result);
+    } catch (error: any) {
+      console.error('[VideoController] Scraped Metadata Error:', error);
+      res.status(400).json({
+        error: {
+          code: 'METADATA_ERROR',
+          message: error.message || 'Failed to scrape video metadata'
+        }
+      });
+    }
   }
 }
