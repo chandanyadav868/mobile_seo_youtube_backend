@@ -1,4 +1,6 @@
 import { YoutubeTranscript } from 'youtube-transcript';
+import { youtubeDl } from 'youtube-dl-exec';
+import { AssemblyAI } from 'assemblyai';
 
 // Helper to decode HTML entities in transcripts
 function decodeEntities(text: string): string {
@@ -101,8 +103,16 @@ export class YoutubeTranscriptService {
       console.log(`[YoutubeTranscriptService] Transcript preview: "${result.fullText.substring(0, 300)}..."`);
       return result;
     } catch (fallbackError: any) {
-      console.error(`[YoutubeTranscriptService] All layers failed for ${videoId}:`, fallbackError);
-      throw new Error(`Failed to retrieve transcript: ${fallbackError.message || fallbackError}`);
+      console.warn(`[YoutubeTranscriptService] [Layer 2] failed: ${fallbackError.message || fallbackError}. Trying Layer 3 AssemblyAI fallback...`);
+    }
+
+    // Layer 3: AssemblyAI Fallback (in-memory streaming, completely unblockable)
+    try {
+      const result = await this.fetchFallbackAssemblyAI(videoId);
+      return result;
+    } catch (assemblyError: any) {
+      console.error(`[YoutubeTranscriptService] All layers failed for ${videoId}:`, assemblyError);
+      throw new Error(`Failed to retrieve transcript: ${assemblyError.message || assemblyError}`);
     }
   }
 
@@ -178,5 +188,78 @@ export class YoutubeTranscriptService {
       segments,
       fullText,
     };
+  }
+
+  /**
+   * Layer 3 Fallback: Unblockable in-memory speech-to-text audio stream transcription.
+   */
+  private static async fetchFallbackAssemblyAI(videoId: string) {
+    const apiKey = process.env.ASSEMBLYAI_API_KEY || '495b3cf18e0b49aa8fc56b325307d538';
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    console.log(`[YoutubeTranscriptService] [Layer 3] Falling back to AssemblyAI (in-memory streaming) for videoId: ${videoId}`);
+    
+    try {
+      // Spawn yt-dlp child process and output directly to stdout (-)
+      const processPromise = youtubeDl.exec(youtubeUrl, {
+        format: 'bestaudio[ext=m4a]/bestaudio',
+        output: '-',
+        noWarnings: true,
+      });
+
+      const stream = processPromise.stdout;
+      if (!stream) {
+        throw new Error('yt-dlp stdout stream is null.');
+      }
+
+      const client = new AssemblyAI({ apiKey });
+      
+      // Upload the readable stream directly to AssemblyAI
+      const uploadUrl = await client.files.upload(stream);
+      console.log(`[YoutubeTranscriptService] [Layer 3] Audio stream uploaded. Starting transcription...`);
+
+      const transcript = await client.transcripts.transcribe({
+        audio: uploadUrl,
+        speech_models: ["universal-3-pro", "universal-2"]
+      });
+
+      if (transcript.status === 'error') {
+        throw new Error(`AssemblyAI Transcription failed: ${transcript.error}`);
+      }
+
+      const fullText = transcript.text || '';
+      console.log(`[YoutubeTranscriptService] [Layer 3] AssemblyAI transcription complete! Status: ${transcript.status}`);
+
+      let segments: Array<{ text: string, start: number, duration: number }> = [];
+      try {
+        const sentencesResponse = await client.transcripts.sentences(transcript.id);
+        if (sentencesResponse && Array.isArray(sentencesResponse.sentences)) {
+          segments = sentencesResponse.sentences.map((s: any) => ({
+            text: s.text,
+            start: s.start / 1000,
+            duration: (s.end - s.start) / 1000,
+          }));
+        }
+      } catch (sentenceError) {
+        console.warn(`[YoutubeTranscriptService] Failed to fetch sentences timestamps, returning fallback single segment:`, sentenceError);
+      }
+
+      if (segments.length === 0) {
+        segments = [{
+          text: fullText,
+          start: 0,
+          duration: 0,
+        }];
+      }
+
+      return {
+        videoId,
+        segments,
+        fullText,
+      };
+    } catch (err: any) {
+      console.error(`[YoutubeTranscriptService] [Layer 3] AssemblyAI Fallback failed:`, err);
+      throw err;
+    }
   }
 }
