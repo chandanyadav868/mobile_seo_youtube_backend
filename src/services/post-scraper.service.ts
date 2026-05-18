@@ -1,3 +1,17 @@
+// Helper to decode HTML entities in scraped strings
+function decodeEntities(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
 export class PostScraperService {
   /**
    * Scrapes a public YouTube Community Post to extract high-resolution uncropped photo attachments and author info.
@@ -81,7 +95,8 @@ export class PostScraperService {
         // Extract post details from backstagePostRenderer
         if (obj.backstagePostRenderer) {
           const bpr = obj.backstagePostRenderer;
-          authorName = bpr.authorText?.runs?.[0]?.text || bpr.authorText?.simpleText || authorName;
+          const rawAuthor = bpr.authorText?.runs?.[0]?.text || bpr.authorText?.simpleText || authorName;
+          authorName = decodeEntities(rawAuthor);
           
           const avatarThumbs = bpr.authorThumbnail?.thumbnails;
           if (avatarThumbs && avatarThumbs.length > 0) {
@@ -91,7 +106,8 @@ export class PostScraperService {
             }
           }
 
-          contentText = bpr.backstagePostContent?.runs?.map((r: any) => r.text).join('') || bpr.backstagePostContent?.simpleText || contentText;
+          const rawContent = bpr.backstagePostContent?.runs?.map((r: any) => r.text).join('') || bpr.backstagePostContent?.simpleText || contentText;
+          contentText = decodeEntities(rawContent);
         }
 
         // Collect all image attachments

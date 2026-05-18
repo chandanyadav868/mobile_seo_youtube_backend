@@ -1,3 +1,17 @@
+// Helper to decode HTML entities in scraped strings
+function decodeEntities(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
 export class SearchSpyService {
   /**
    * Scrapes organic search results for any given search term.
@@ -66,8 +80,10 @@ export class SearchSpyService {
         if (obj.videoRenderer) {
           const vr = obj.videoRenderer;
           const videoId = vr.videoId;
-          const title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || 'Unknown Title';
-          const channelName = vr.ownerText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || 'Unknown Channel';
+          const rawTitle = vr.title?.runs?.[0]?.text || vr.title?.simpleText || 'Unknown Title';
+          const title = decodeEntities(rawTitle);
+          const rawChannel = vr.ownerText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || 'Unknown Channel';
+          const channelName = decodeEntities(rawChannel);
           
           // Parse views
           const viewsRaw = vr.viewCountText?.simpleText || vr.viewCountText?.runs?.[0]?.text || '0 views';

@@ -1,3 +1,17 @@
+// Helper to decode HTML entities in scraped strings
+function decodeEntities(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
 export class ChannelSpyService {
   /**
    * Helper to clean up channel handles.
@@ -133,7 +147,8 @@ export class ChannelSpyService {
           const videoId = videoRenderer.videoId;
           if (!videoId) continue;
 
-          const title = videoRenderer.title?.runs?.[0]?.text || videoRenderer.title?.accessibility?.accessibilityData?.label || 'Unknown Title';
+          const rawTitle = videoRenderer.title?.runs?.[0]?.text || videoRenderer.title?.accessibility?.accessibilityData?.label || 'Unknown Title';
+          const title = decodeEntities(rawTitle);
           
           // Parse View Count
           const viewsRaw = videoRenderer.viewCountText?.simpleText || videoRenderer.viewCountText?.runs?.[0]?.text || '0 views';
@@ -164,7 +179,8 @@ export class ChannelSpyService {
           if (!videoId) continue;
 
           const metaModel = lockupViewModel.metadata?.lockupMetadataViewModel;
-          const title = metaModel?.title?.content || 'Unknown Title';
+          const rawTitle = metaModel?.title?.content || 'Unknown Title';
+          const title = decodeEntities(rawTitle);
 
           // Thumbnail
           const thumbSources = lockupViewModel.contentImage?.thumbnailViewModel?.image?.sources || [];
@@ -243,7 +259,7 @@ export class ChannelSpyService {
 
       // Extract channel name & avatar from meta tags
       const channelNameMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/);
-      const channelName = channelNameMatch ? channelNameMatch[1] : handle;
+      const channelName = channelNameMatch ? decodeEntities(channelNameMatch[1]) : handle;
       const avatarMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]*)"/);
       const avatarUrl = avatarMatch ? avatarMatch[1] : '';
 
