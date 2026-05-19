@@ -18,7 +18,7 @@ function decodeEntities(text: string): string {
 // Custom Fetch interceptor that forces region/language context and reinforces desktop web headers
 const customFetch = (url: string, init?: any) => {
   let modifiedInit = { ...init };
-  
+
   if (url.includes('youtubei/v1/player') && modifiedInit?.body) {
     try {
       const bodyObj = JSON.parse(modifiedInit.body);

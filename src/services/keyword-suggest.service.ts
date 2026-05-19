@@ -8,7 +8,7 @@ export class KeywordSuggestService {
       const cleaned = query.trim();
       if (!cleaned) return [];
 
-      const url = `https://suggestqueries-google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(cleaned)}`;
+      const url = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(cleaned)}`;
 
       const response = await fetch(url, {
         headers: {
