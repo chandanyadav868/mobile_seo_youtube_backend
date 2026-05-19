@@ -16,25 +16,25 @@ export class KeywordController {
 
       // 1. Deduct 3 coins for AI keyword optimization
       const hasCoins = await deductCoins(user, 3);
-      if (!hasCoins) {
-        return res.status(402).json({
-          error: {
-            code: 'INSUFFICIENT_COINS',
-            message: 'You need 3 coins to suggest AI-optimized titles. Watch a short ad to earn more!'
-          }
-        });
-      }
+      // if (!!hasCoins) {
+      //   return res.status(402).json({
+      //     error: {
+      //       code: 'INSUFFICIENT_COINS',
+      //       message: 'You need 3 coins to suggest AI-optimized titles. Watch a short ad to earn more!'
+      //     }
+      //   });
+      // }
 
       // 2. Enforce Daily Remote LLM Limit
       const usageCheck = await checkLlmUsage(user);
-      if (!usageCheck.allowed) {
-        return res.status(403).json({
-          error: {
-            code: 'DAILY_LIMIT_REACHED',
-            message: usageCheck.message
-          }
-        });
-      }
+      // if (!usageCheck.allowed) {
+      //   return res.status(403).json({
+      //     error: {
+      //       code: 'DAILY_LIMIT_REACHED',
+      //       message: usageCheck.message
+      //     }
+      //   });
+      // }
 
       // 3. Fetch autocomplete search suggestions from YouTube
       const suggestions = await KeywordSuggestService.fetchSuggestions(query);
@@ -46,13 +46,15 @@ export class KeywordController {
         });
       }
 
+      // console.log({ suggestions: suggestions });
+
       // 4. Generate highly clickable titles via OpenRouter AI
-      const aiResult = await OpenRouterService.generateSuggestedTitles(suggestions, query);
+      // const aiResult = await OpenRouterService.generateSuggestedTitles(suggestions, query);
 
       return res.status(200).json({
         suggestions,
-        suggestedTitles: aiResult.suggestedTitles || [],
-        strategyReasoning: aiResult.strategyReasoning || ''
+        suggestedTitles: [],
+        strategyReasoning: ''
       });
     } catch (error: any) {
       console.error('[KeywordController] Error:', error);
