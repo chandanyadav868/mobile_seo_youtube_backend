@@ -524,9 +524,14 @@ export class VideoController {
       }
 
       // Fetch the transcript via our service
-      const result = await YoutubeTranscriptService.fetchTranscript(videoId);
-      
-      res.status(200).json(result);
+      // const result = await YoutubeTranscriptService.fetchTranscript(videoId);
+
+      res.status(200).json({
+        data: {
+          transcript: "Transcript of the video"
+        },
+        status: 200
+      })
     } catch (error: any) {
       console.error('[VideoController] Transcript Error:', error);
       res.status(400).json({
@@ -579,7 +584,7 @@ export class VideoController {
 
       // Fetch metadata via our scraped service
       const result = await YoutubeMetadataService.fetchMetadata(videoId);
-      
+
       res.status(200).json(result);
     } catch (error: any) {
       console.error('[VideoController] Scraped Metadata Error:', error);
